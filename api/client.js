@@ -1,8 +1,24 @@
 import axios from 'axios';
 
-// .env dosyasındaki IP adresini alıyoruz [cite: 135]
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
 export const api = axios.create({
-  baseURL: API_BASE_URL, // [cite: 136, 137]
+  baseURL: API_BASE_URL,
+  timeout: 10000,
 });
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (!error.response) {
+      throw new Error('Ag hatasi. Baglantinizi kontrol edin.');
+    }
+    if (error.response.status === 404) {
+      throw new Error('Kaynak bulunamadi.');
+    }
+    if (error.response.status >= 500) {
+      throw new Error('Sunucu hatasi. Lutfen sonra tekrar deneyin.');
+    }
+    throw error;
+  }
+);

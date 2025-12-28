@@ -9,18 +9,8 @@ export default function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator>
-        {/* Liste Ekranı */}
-        <Stack.Screen 
-          name="Profiles" 
-          component={ProfilesListScreen} 
-          options={{ title: 'Profiles Directory' }}
-        />
-        {/* Detay Ekranı */}
-        <Stack.Screen 
-          name="ProfileDetail" 
-          component={ProfileDetailScreen} 
-          options={{ title: 'Profile Details' }}
-        />
+        <Stack.Screen name="Profiles" component={ProfilesListScreen} options={{ title: 'Profiller' }} />
+        <Stack.Screen name="ProfileDetail" component={ProfileDetailScreen} options={{ title: 'Profil Detayi' }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

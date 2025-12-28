@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, FlatList, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, Pressable, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
 import { api } from '../api/client';
 
 export default function ProfilesListScreen({ navigation }) {
@@ -7,54 +7,63 @@ export default function ProfilesListScreen({ navigation }) {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Veri çekme fonksiyonu 
-  const fetchProfiles = async () => {
-    if (loading || !hasMore) return;
+  const fetchProfiles = async (isRefresh = false) => {
+    if (loading || (!hasMore && !isRefresh)) return;
     setLoading(true);
     try {
-      const res = await api.get(`/profiles?page=${page}&limit=10`);
+      const currentPage = isRefresh ? 1 : page;
+      const res = await api.get(`/profiles?page=${currentPage}&limit=10`);
       if (res.data.length === 0) {
         setHasMore(false);
       } else {
-        setProfiles(prev => [...prev, ...res.data]);
-        setPage(prev => prev + 1);
+        setProfiles(prev => isRefresh ? res.data : [...prev, ...res.data]);
+        setPage(currentPage + 1);
       }
     } catch (err) {
-      alert("Sunucuya bağlanılamadı! Lütfen IP adresini kontrol edin.");
-      console.error(err);
+      alert(err.message);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    setHasMore(true);
+    await fetchProfiles(true);
+  };
+
   useEffect(() => { fetchProfiles(); }, []);
+
+  if (loading && profiles.length === 0) {
+    return <View style={styles.center}><ActivityIndicator size="large" /><Text>Yukleniyor...</Text></View>;
+  }
 
   return (
     <View style={styles.container}>
       <FlatList
         data={profiles}
         keyExtractor={(item) => item.id.toString()}
-        onEndReached={fetchProfiles} // Sayfalama (Pagination) için 
+        onEndReached={() => fetchProfiles()}
         onEndReachedThreshold={0.5}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        ListEmptyComponent={<View style={styles.center}><Text>Profil bulunamadi.</Text></View>}
         renderItem={({ item }) => (
-          <Pressable 
-            style={styles.card} 
-            onPress={() => navigation.navigate('ProfileDetail', { id: item.id })}
-          >
+          <Pressable style={styles.card} onPress={() => navigation.navigate('ProfileDetail', { id: item.id })}>
             <Text style={styles.name}>{item.name}</Text>
-            <Text style={styles.email}>{item.email}</Text>
+            <Text>{item.email}</Text>
           </Pressable>
         )}
-        ListFooterComponent={loading && <ActivityIndicator color="#007AFF" />}
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5', padding: 10 },
-  card: { backgroundColor: '#fff', padding: 15, marginBottom: 10, borderRadius: 10, elevation: 2 },
-  name: { fontSize: 18, fontWeight: 'bold' },
-  email: { color: '#666' }
+  container: { flex: 1, backgroundColor: '#f5f5f5' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  card: { backgroundColor: 'white', padding: 16, margin: 8, borderRadius: 8, elevation: 3 },
+  name: { fontSize: 18, fontWeight: 'bold' }
 });
